@@ -9,14 +9,6 @@
 
 int main() {
 
-  auto fn1 = bezier::Cup();
-  auto fn2 = bezier::Scale(bezier::Cup(), 1, 2);
-  auto fn3 = bezier::Translate(bezier::Cup(), 1, 2);
-
-  for(int i = 0; i < 4; i++)
-  {
-    std::cout << fn1(i) << fn2(i) << fn3(i) << std::endl; 
-  }
   // // Koniczyna
   // auto fn = bezier::Cap();
   // fn = bezier::MovePoint(fn, 0, 0.75, 1.25);
@@ -56,37 +48,37 @@ int main() {
   // const bezier::P3CurvePlotter plot3(bezier::Scale(fn, 1.0, 0.5), 8, 60);
   // plot3.Print();
 
-  // // Węzły (punkty kontrolne) krzywej – sprawdzenie poprawności węzłów
-  // constexpr bezier::types::real_t precision = std::pow(2, -16);
-  // bezier::types::real_t a, b;
-  // fn = bezier::Concatenate(bezier::Rotate(bezier::Cup(), 90),
-  //                          bezier::MovePoint(bezier::MovePoint(bezier::Cap(), 0, 1.0, 0.0), 3, -1.0, 0.0));
-  // std::vector<std::pair<bezier::types::real_t, bezier::types::real_t>>
-  //   v{{-1, -1}, {1, -1}, {1, 1}, {-1, 1}, {0, -1}, {-1, 1}, {1, 1}, {0, -1}};
-  // for_each(v.begin(), v.end(),
-  //   [&](auto & p) {
-  //     static bezier::types::node_index_t k = 0;
-  //     a = std::abs(p.first - fn(k).X);
-  //     b = std::abs(p.second - fn(k).Y);
-  //     assert(a <= precision && b <= precision);
-  //     k++;
-  //   }
-  // );
-  // std::cout << "Curve node correctness: PASS\n";
+  // Węzły (punkty kontrolne) krzywej – sprawdzenie poprawności węzłów
+  constexpr bezier::types::real_t precision = std::pow(2, -16);
+  bezier::types::real_t a, b;
+  auto fn = bezier::Concatenate(bezier::Rotate(bezier::Cup(), 90),
+                           bezier::MovePoint(bezier::MovePoint(bezier::Cap(), 0, 1.0, 0.0), 3, -1.0, 0.0));
+  std::vector<std::pair<bezier::types::real_t, bezier::types::real_t>>
+    v{{-1, -1}, {1, -1}, {1, 1}, {-1, 1}, {0, -1}, {-1, 1}, {1, 1}, {0, -1}};
+  for_each(v.begin(), v.end(),
+    [&](auto & p) {
+      static bezier::types::node_index_t k = 0;
+      a = std::abs(p.first - fn(k).X);
+      b = std::abs(p.second - fn(k).Y);
+      assert(a <= precision && b <= precision);
+      k++;
+    }
+  );
+  std::cout << "Curve node correctness: PASS\n";
 
-  // // Sprawdzenie wyjątku
-  // fn = bezier::Concatenate(bezier::ConvexArc(),
-  //                          bezier::ConcaveArc(),
-  //                          bezier::Cap(),
-  //                          bezier::Cup());
-  // try {
-  //   a = fn(4 * bezier::constants::NUM_OF_CUBIC_BEZIER_NODES).X;
-  //   std::cout << "Exception: FAIL\n";
-  // }
-  // catch (const std::out_of_range &) {
-  //   std::cout << "Exception: PASS\n";
-  // }
-  // catch (...) {
-  //   std::cout << "Exception: FAIL\n";
-  // }
+  // Sprawdzenie wyjątku
+  fn = bezier::Concatenate(bezier::ConvexArc(),
+                           bezier::ConcaveArc(),
+                           bezier::Cap(),
+                           bezier::Cup());
+  try {
+    a = fn(4 * bezier::constants::NUM_OF_CUBIC_BEZIER_NODES).X;
+    std::cout << "Exception: FAIL\n";
+  }
+  catch (const std::out_of_range &) {
+    std::cout << "Exception: PASS\n";
+  }
+  catch (...) {
+    std::cout << "Exception: FAIL\n";
+  }
 }

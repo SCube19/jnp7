@@ -6,6 +6,7 @@
 #include <math.h>
 #include <type_traits>
 #include <vector>
+#include <numeric>
 
 #include <unistd.h>
 
@@ -75,20 +76,27 @@ namespace bezier
         return i < bezierVec.size() ? bezierVec[i] : throw std::out_of_range("a curve node index is out of range");
     }
 
-    //niefunkcyjne
-    const std::vector<types::point_2d> decodeFunction(const types::PointFunction &f)
+    size_t domainSize(const types::PointFunction &f, size_t i = 0)
     {
-        std::vector<types::point_2d> rVec{};
         try
         {
-            types::node_index_t i = 0;
-            while (true)
-                rVec.push_back(f(i++));
+            f(i);
+            return 1 + domainSize(f, i + 1);
         }
         catch (const std::out_of_range &e)
         {
-            return rVec;
+            return 0;
         }
+    }
+
+    const std::vector<types::point_2d> decodeFunction(const types::PointFunction &f)
+    {
+        const size_t size = domainSize(f);
+        std::vector<types::node_index_t> args(size);
+        std::iota(args.begin(), args.end(), 0);
+
+        std::vector<types::point_2d> rVec{};
+        std::transform(args.cbegin(), args.cend(), std::back_inserter(rVec), [f](types::node_index_t i) -> types::point_2d { return f(i); });
 
         return rVec;
     }
@@ -97,8 +105,8 @@ namespace bezier
     const std::vector<types::point_2d> applyTransformation(const Bind &toApply, const types::PointFunction &f)
     {
         std::vector<types::point_2d> rVector{};
-        std::vector<types::point_2d> decoded = decodeFunction(f);
-        std::transform(decoded.begin(), decoded.end(), std::back_inserter(rVector), toApply);
+        const std::vector<types::point_2d> decoded = decodeFunction(f);
+        std::transform(decoded.cbegin(), decoded.cend(), std::back_inserter(rVector), toApply);
         return rVector;
     }
 
@@ -108,7 +116,7 @@ namespace bezier
     {
         return types::PointFunction(
             [](types::node_index_t i) {
-                static const std::vector<types::point_2d> bezierVec{
+                const std::vector<types::point_2d> bezierVec{
                     types::point_2d(-1, 1),
                     types::point_2d(-1, -1),
                     types::point_2d(1, -1),
@@ -124,7 +132,7 @@ namespace bezier
     {
         return types::PointFunction(
             [](types::node_index_t i) {
-                static const std::vector<types::point_2d> bezierVec{
+                const std::vector<types::point_2d> bezierVec{
                     types::point_2d(-1, -1),
                     types::point_2d(-1, 1),
                     types::point_2d(1, 1),
@@ -140,7 +148,7 @@ namespace bezier
     {
         return types::PointFunction(
             [](types::node_index_t i) {
-                static const std::vector<types::point_2d> bezierVec{
+                const std::vector<types::point_2d> bezierVec{
                     types::point_2d(0, 1),
                     types::point_2d(constants::ARC, 1),
                     types::point_2d(1, constants::ARC),
@@ -152,19 +160,12 @@ namespace bezier
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////CONCAVE ARC////////////////////////////////////////////////////
-    //próba użycia MovePoint() kończy się __gnu_cxx::recursive_init_error
+    template <typename numeric>
+    types::PointFunction MovePoint(const types::PointFunction &f, types::node_index_t i, numeric x, numeric y);
+
     types::PointFunction ConcaveArc()
     {
-        return types::PointFunction(
-            [](types::node_index_t i) {
-                static const std::vector<types::point_2d> bezierVec{
-                    types::point_2d(0, 1),
-                    types::point_2d(0, 1 - constants::ARC),
-                    types::point_2d(1 - constants::ARC, 0),
-                    types::point_2d(1, 0)};
-
-                return get(bezierVec, i);
-            });
+        return MovePoint(MovePoint(ConvexArc(), 1, -constants::ARC, -constants::ARC), 2, -constants::ARC, -constants::ARC);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -173,7 +174,7 @@ namespace bezier
     {
         return types::PointFunction(
             [p, q](types::node_index_t i) {
-                static const std::vector<types::point_2d> bezierVec{
+                const std::vector<types::point_2d> bezierVec{
                     types::point_2d(p.X, p.Y),
                     types::point_2d(p.X, p.Y),
                     types::point_2d(q.X, q.Y),
@@ -197,11 +198,9 @@ namespace bezier
     template <typename numeric>
     types::PointFunction MovePoint(const types::PointFunction &f, types::node_index_t i, numeric x, numeric y)
     {
-        if (!std::is_arithmetic<numeric>() || f == nullptr)
-            throw;
-
-        return types::PointFunction([f, i, x, y](types::node_index_t q) {
-            static const std::vector<types::point_2d> bezierVec = movePt<numeric>(f, i, x, y);
+        static_assert(std::is_arithmetic<numeric>());
+        return f == nullptr ? f : types::PointFunction([f, i, x, y](types::node_index_t q) {
+            const std::vector<types::point_2d> bezierVec = movePt<numeric>(f, i, x, y);
 
             return get(bezierVec, q);
         });
@@ -212,26 +211,21 @@ namespace bezier
     template <typename degrees>
     const double radians(degrees deg)
     {
-        //std::cout << "to radians\n";
         return ((double)deg * (M_PI / 180.0f));
     }
 
     template <typename degrees>
     const types::point_2d rotPoint(const types::point_2d &p, degrees deg)
     {
-        //std::cout << "rotting point\n";
         return types::point_2d(p.X * cos(radians(deg)) - p.Y * sin(radians(deg)), p.X * sin(radians(deg)) + p.Y * cos(radians(deg)));
     }
 
     template <typename degrees>
     types::PointFunction Rotate(const types::PointFunction &f, degrees a)
     {
-        if (!std::is_arithmetic<degrees>() || f == nullptr)
-            throw;
-
-        //std::cout << "after throw\n";
-        return types::PointFunction([f, a](types::node_index_t i) {
-            static const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(rotPoint<degrees>, std::placeholders::_1, a), f);
+        static_assert(std::is_arithmetic<degrees>());
+        return f == nullptr ? f : types::PointFunction([f, a](types::node_index_t i) {
+            const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(rotPoint<degrees>, std::placeholders::_1, a), f);
 
             return get(bezierVec, i);
         });
@@ -248,11 +242,9 @@ namespace bezier
     template <typename numeric>
     types::PointFunction Scale(const types::PointFunction &f, numeric x, numeric y)
     {
-        if (!std::is_arithmetic<numeric>() || f == nullptr)
-            throw;
-
-        return types::PointFunction([f, x, y](types::node_index_t i) {
-            static const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(scalePoint<numeric>, std::placeholders::_1, x, y), f);
+        static_assert(std::is_arithmetic<numeric>());
+        return f == nullptr ? f : types::PointFunction([f, x, y](types::node_index_t i) {
+            const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(scalePoint<numeric>, std::placeholders::_1, x, y), f);
 
             return get(bezierVec, i);
         });
@@ -269,11 +261,9 @@ namespace bezier
     template <typename numeric>
     types::PointFunction Translate(const types::PointFunction &f, numeric x, numeric y)
     {
-        if (!std::is_arithmetic<numeric>() || f == nullptr)
-            throw;
-
-        return types::PointFunction([f, x, y](types::node_index_t i) {
-            static const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(translatePoint<numeric>, std::placeholders::_1, x, y), f);
+        static_assert(std::is_arithmetic<numeric>());
+        return f == nullptr ? f : types::PointFunction([f, x, y](types::node_index_t i) {
+            const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(translatePoint<numeric>, std::placeholders::_1, x, y), f);
 
             return get(bezierVec, i);
         });
@@ -281,9 +271,21 @@ namespace bezier
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////CONCATENATE////////////////////////////////////////////////////
-    template <typename Func>
-    Func Concatenate(Func f1, Func f2)
+    const std::vector<types::point_2d> vecConcat(const std::vector<types::point_2d> &v1, const std::vector<types::point_2d> &v2)
     {
+        std::vector<types::point_2d> v12(v1);
+        v12.insert(v12.end(), v2.begin(), v2.end());
+        return v12;
+    }
+
+    template <typename Func>
+    Func Concatenate(const Func &f1, const Func &f2)
+    {
+        return (f1 == nullptr && f2 == nullptr) ? f1 : (f1 == nullptr ? f2 : (f2 == nullptr ? f1 : types::PointFunction([f1, f2](types::node_index_t i) {
+            const std::vector<types::point_2d> bezierVec = vecConcat(decodeFunction(f1), decodeFunction(f2));
+
+            return get(bezierVec, i);
+        })));
     }
 
     template <typename Func, typename... Rest>
