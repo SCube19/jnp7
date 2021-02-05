@@ -72,17 +72,12 @@ namespace bezier
     } // namespace types
 
     /////////////////////////////////HELPER FUNCS///////////////////////////////////////////////////
-    const types::point_2d get(const std::vector<types::point_2d> &bezierVec, types::node_index_t i)
-    {
-        return i < bezierVec.size() ? bezierVec[i] : throw std::out_of_range("a curve node index is out of range");
-    }
-
     size_t domainSize(const types::PointFunction &f, size_t i = 0)
     {
         try
         {
             f(i);
-            return 1 + domainSize(f, i + 1);
+            return 1 + domainSize(f, i + constants::NUM_OF_CUBIC_BEZIER_NODES);
         }
         catch (const std::out_of_range &e)
         {
@@ -96,7 +91,11 @@ namespace bezier
         std::vector<types::node_index_t> args(size);
         std::iota(args.begin(), args.end(), 0);
 
-        std::vector<types::point_2d> rVec{};
+        std::vector<types::point_2d> rVec;
+        // for(auto x: args)
+        //     std::cout << x  << " ";
+        // std::cout << std::endl;
+
         std::transform(args.cbegin(), args.cend(), std::back_inserter(rVec), [f](types::node_index_t i) -> types::point_2d { return f(i); });
 
         return rVec;
@@ -123,7 +122,7 @@ namespace bezier
                     types::point_2d(1, -1),
                     types::point_2d(1, 1)};
 
-                return get(bezierVec, i);
+                return i < bezierVec.size() ? bezierVec[i] : throw std::out_of_range("a curve node index is out of range");
             });
     }
 
@@ -139,7 +138,7 @@ namespace bezier
                     types::point_2d(1, 1),
                     types::point_2d(1, -1)};
 
-                return get(bezierVec, i);
+                return i < bezierVec.size() ? bezierVec[i] : throw std::out_of_range("a curve node index is out of range");
             });
     }
 
@@ -155,7 +154,7 @@ namespace bezier
                     types::point_2d(1, constants::ARC),
                     types::point_2d(1, 0)};
 
-                return get(bezierVec, i);
+                return i < bezierVec.size() ? bezierVec[i] : throw std::out_of_range("a curve node index is out of range");
             });
     }
 
@@ -181,7 +180,7 @@ namespace bezier
                     types::point_2d(q.X, q.Y),
                     types::point_2d(q.X, q.Y)};
 
-                return get(bezierVec, i);
+                return i < bezierVec.size() ? bezierVec[i] : throw std::out_of_range("a curve node index is out of range");
             });
     }
 
@@ -189,11 +188,9 @@ namespace bezier
     ////////////////////////////////////////MOVE POINT////////////////////////////////////////////////////
 
     template <typename numeric>
-    const std::vector<types::point_2d> movePt(const types::PointFunction &f, types::node_index_t i, numeric x, numeric y)
+    const types::point_2d movePt(const types::PointFunction &f, types::node_index_t q, types::node_index_t i, numeric x, numeric y)
     {
-        std::vector<types::point_2d> rVector = decodeFunction(f);
-        rVector[i] = rVector[i] + types::point_2d(x, y);
-        return rVector;
+        return q == i ? f(q) + types::point_2d(x, y) : f(q);
     }
 
     template <typename numeric>
@@ -201,9 +198,7 @@ namespace bezier
     {
         static_assert(std::is_arithmetic<numeric>());
         return f == nullptr ? f : types::PointFunction([f, i, x, y](types::node_index_t q) {
-            const std::vector<types::point_2d> bezierVec = movePt<numeric>(f, i, x, y);
-
-            return get(bezierVec, q);
+            return movePt(f, q, i, x, y);
         });
     }
 
@@ -226,9 +221,7 @@ namespace bezier
     {
         static_assert(std::is_arithmetic<degrees>());
         return f == nullptr ? f : types::PointFunction([f, a](types::node_index_t i) {
-            const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(rotPoint<degrees>, std::placeholders::_1, a), f);
-
-            return get(bezierVec, i);
+            return rotPoint(f(i), a);
         });
     }
 
@@ -245,9 +238,7 @@ namespace bezier
     {
         static_assert(std::is_arithmetic<numeric>());
         return f == nullptr ? f : types::PointFunction([f, x, y](types::node_index_t i) {
-            const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(scalePoint<numeric>, std::placeholders::_1, x, y), f);
-
-            return get(bezierVec, i);
+            return scalePoint(f(i), x, y);
         });
     }
 
@@ -264,28 +255,18 @@ namespace bezier
     {
         static_assert(std::is_arithmetic<numeric>());
         return f == nullptr ? f : types::PointFunction([f, x, y](types::node_index_t i) {
-            const std::vector<types::point_2d> bezierVec = applyTransformation(std::bind(translatePoint<numeric>, std::placeholders::_1, x, y), f);
-
-            return get(bezierVec, i);
+            return translatePoint(f(i), x, y);
         });
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////CONCATENATE////////////////////////////////////////////////////
-    const std::vector<types::point_2d> vecConcat(const std::vector<types::point_2d> &v1, const std::vector<types::point_2d> &v2)
-    {
-        std::vector<types::point_2d> v12(v1);
-        v12.insert(v12.end(), v2.begin(), v2.end());
-        return v12;
-    }
-
     template <typename Func>
     Func Concatenate(const Func &f1, const Func &f2)
     {
         return (f1 == nullptr && f2 == nullptr) ? f1 : (f1 == nullptr ? f2 : (f2 == nullptr ? f1 : types::PointFunction([f1, f2](types::node_index_t i) {
-            const std::vector<types::point_2d> bezierVec = vecConcat(decodeFunction(f1), decodeFunction(f2));
-
-            return get(bezierVec, i);
+            const size_t fSize = constants::NUM_OF_CUBIC_BEZIER_NODES * domainSize(f1);
+            return i < fSize ? f1(i) : f2(i - fSize);
         })));
     }
 
@@ -337,29 +318,41 @@ namespace bezier
         {
             const double precision = 1 / this->res;
             std::vector<double> ts(res);
-            std::generate(ts.begin(), ts.end(), [precision, n = -precision]() mutable {n += precision; return n;});
-            const auto f = [this, funcPoints, startSegment](double t){return deCasteljau(funcPoints, t, startSegment);};
+            std::generate(ts.begin(), ts.end(), [precision, n = -precision]() mutable {n += precision; return n; });
+            const auto f = [this, funcPoints, startSegment](double t) { return deCasteljau(funcPoints, t, startSegment); };
             std::set<std::pair<size_t, size_t>> segmentPoints;
-            std::transform(ts.cbegin(), ts.cend(), std::inserter(segmentPoints, segmentPoints.begin()), std::bind(f, funcPoints, std::placeholders::_1, startSegment));
+            std::transform(ts.cbegin(), ts.cend(), std::inserter(segmentPoints, segmentPoints.begin()), f);
             return segmentPoints;
         }
 
+        //not functional
         const std::set<std::pair<size_t, size_t>> calculateCurve(types::PointFunction f, int segments = 1)
         {
+            std::cout << "HERE10\n";
             const std::vector<types::point_2d> funcPoints = decodeFunction(f);
+            std::cout << "HERE1\n";
             std::vector<int> args(segments);
-            std::generate(args.begin(), args.end(), [n = -4]() mutable {n += 4; return n;});
-            std::set<std::pair<>>
-            
+            std::cout << "HERE2\n";
+            std::generate(args.begin(), args.end(), [n = -4]() mutable {n += 4; return n; });
+            std::cout << "HERE3\n";
+            std::set<std::pair<size_t, size_t>> rPoints;
+            std::cout << "HERE4\n";
+            for (int i = 0; i < segments; i++)
+            {
+                std::set<std::pair<size_t, size_t>> tmp = calculateSegment(funcPoints, i * 4);
+                rPoints.insert(tmp.begin(), tmp.end());
+            }
+            std::cout << "HERE5\n";
+            return rPoints;
         }
 
-        const std::string drawCurve(char fb, char bg, std::set<std::pair<size_t, size_t>>::iterator it,  size_t count = 0) const
+        const std::string drawCurve(char fb, char bg, std::set<std::pair<size_t, size_t>>::iterator it, size_t count = 0) const
         {
             const size_t i = count / this->res;
             const size_t j = count % this->res;
 
-            const char sign = (*it == types::point_2d(i, j)) ? fb : bg;
-            (*it == types::point_2d(i, j)) ? it++ : it;
+            const char sign = (it->first == i && it->second == j) ? fb : bg;
+            (it->first == i && it->second == j) ? it++ : it;
 
             return ((count + 1) % this->res == 0) ? "\n" : "" + sign + (count + 1 == this->res ? "" : drawCurve(fb, bg, it, count + 1));
         }
