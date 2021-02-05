@@ -65,7 +65,7 @@ układy węzłów pojedynczego (tylko pierwszego) segmentu Béziera:
                        definiujące odcinek prostej łączący punkty p i q.
 Funkcje generujące węzły, zwracane przez powyższe funkcje, powinny w sytuacji
 podania im nieprawidłowego indeksu węzła zgłaszać wyjątek typu std::out_of_range
-z komunikatem „a curve node index is out of range”. Prawidłowy indeks węzła ma
+z komunikatem „”. Prawidłowy indeks węzła ma
 wartość mniejszą od liczby węzłów w sześciennej krzywej Béziera, reprezentowanej
 stałą NUM_OF_CUBIC_BEZIER_NODES równą 4.
 

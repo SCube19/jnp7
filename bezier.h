@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <vector>
 #include <numeric>
+#include <set>
 
 #include <unistd.h>
 
@@ -298,17 +299,84 @@ namespace bezier
     ////////////////////////////////////////P3 CURVE PLOTTER////////////////////////////////////////////////////
     class P3CurvePlotter
     {
+        const std::set<std::pair<size_t, size_t>> points;
+        const size_t res;
+
+        const types::point_2d deCasteljau(types::PointFunction f, double t, types::node_index_t i) const
+        {
+            const types::point_2d p0 = f(i);
+            const types::point_2d p1 = f(i + 1);
+            const types::point_2d p2 = f(i + 2);
+            const types::point_2d p3 = f(i + 3);
+
+            const types::point_2d b0 = (1 - t) * p0 + t * p1;
+            const types::point_2d b1 = (1 - t) * p1 + t * p2;
+            const types::point_2d b2 = (1 - t) * p2 + t * p3;
+
+            const types::point_2d b01 = (1 - t) * b0 + t * b1;
+            const types::point_2d b11 = (1 - t) * b1 + t * b2;
+
+            const types::point_2d b012 = (1 - t) * b01 + t * b11;
+            return b012;
+        }
+
+        std::pair<size_t, size_t> deCasteljau(const std::vector<types::point_2d> &funcPoints, double t, types::node_index_t i) const
+        {
+            const types::point_2d b0 = (1 - t) * funcPoints[i] + t * funcPoints[i + 1];
+            const types::point_2d b1 = (1 - t) * funcPoints[i + 1] + t * funcPoints[i + 2];
+            const types::point_2d b2 = (1 - t) * funcPoints[i + 2] + t * funcPoints[i + 3];
+
+            const types::point_2d b01 = (1 - t) * b0 + t * b1;
+            const types::point_2d b11 = (1 - t) * b1 + t * b2;
+
+            const types::point_2d b012 = (1 - t) * b01 + t * b11;
+            return std::make_pair<size_t, size_t>((size_t)b012.Y, (size_t)b012.X);
+        }
+
+        std::set<std::pair<size_t, size_t>> calculateSegment(const std::vector<types::point_2d> &funcPoints, types::node_index_t startSegment) const
+        {
+            const double precision = 1 / this->res;
+            std::vector<double> ts(res);
+            std::generate(ts.begin(), ts.end(), [precision, n = -precision]() mutable {n += precision; return n;});
+            const auto f = [this, funcPoints, startSegment](double t){return deCasteljau(funcPoints, t, startSegment);};
+            std::set<std::pair<size_t, size_t>> segmentPoints;
+            std::transform(ts.cbegin(), ts.cend(), std::inserter(segmentPoints, segmentPoints.begin()), std::bind(f, funcPoints, std::placeholders::_1, startSegment));
+            return segmentPoints;
+        }
+
+        const std::set<std::pair<size_t, size_t>> calculateCurve(types::PointFunction f, int segments = 1)
+        {
+            const std::vector<types::point_2d> funcPoints = decodeFunction(f);
+            std::vector<int> args(segments);
+            std::generate(args.begin(), args.end(), [n = -4]() mutable {n += 4; return n;});
+            std::set<std::pair<>>
+            
+        }
+
+        const std::string drawCurve(char fb, char bg, std::set<std::pair<size_t, size_t>>::iterator it,  size_t count = 0) const
+        {
+            const size_t i = count / this->res;
+            const size_t j = count % this->res;
+
+            const char sign = (*it == types::point_2d(i, j)) ? fb : bg;
+            (*it == types::point_2d(i, j)) ? it++ : it;
+
+            return ((count + 1) % this->res == 0) ? "\n" : "" + sign + (count + 1 == this->res ? "" : drawCurve(fb, bg, it, count + 1));
+        }
+
     public:
-        P3CurvePlotter(bezier::types::PointFunction f, int segments = 1, size_t resolution = 80)
+        P3CurvePlotter(types::PointFunction f, int segments = 1, size_t resolution = 80) : res(resolution), points(calculateCurve(f, segments))
         {
         }
 
-        void Print(const std::ostream &s = std::cout, char fb = '*', char bg = ' ') const
+        void Print(std::ostream &s = std::cout, char fb = '*', char bg = ' ') const
         {
+            s << drawCurve(fb, bg, points.begin());
         }
 
-        const bezier::types::point_2d operator()(bezier::types::PointFunction f, double t) const
+        const types::point_2d operator()(types::PointFunction f, double t, types::node_index_t i) const
         {
+            return deCasteljau(f, t, 4 * i);
         }
     };
 
