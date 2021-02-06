@@ -33,32 +33,32 @@ namespace bezier
             point_2d() = delete;
             point_2d(real_t xp, real_t yp) : X(xp), Y(yp){};
 
-            const point_2d operator+(const point_2d &p) const
+            const point_2d operator+(const point_2d &p) const noexcept
             {
                 return point_2d(this->X + p.X, this->Y + p.Y);
             }
 
-            const point_2d operator*(real_t scalar) const
+            const point_2d operator*(real_t scalar) const noexcept
             {
                 return point_2d(this->X * scalar, this->Y * scalar);
             }
 
-            friend const point_2d operator*(real_t scalar, const point_2d &p);
+            friend const point_2d operator*(real_t scalar, const point_2d &p) noexcept;
 
-            bool operator==(const point_2d &p) const
+            bool operator==(const point_2d &p) const noexcept
             {
                 return (this->X == p.X) && (this->Y == p.Y);
             }
 
-            friend std::ostream &operator<<(std::ostream &os, const point_2d &p);
+            friend std::ostream &operator<<(std::ostream &os, const point_2d &p) noexcept;
         };
 
-        const point_2d operator*(real_t scalar, const point_2d &p)
+        const point_2d operator*(real_t scalar, const point_2d &p) noexcept
         {
             return point_2d(p.X * scalar, p.Y * scalar);
         }
 
-        std::ostream &operator<<(std::ostream &os, const point_2d &p)
+        std::ostream &operator<<(std::ostream &os, const point_2d &p) noexcept
         {
             os << '(' << p.X << ", " << p.Y << ')';
             return os;
@@ -73,7 +73,7 @@ namespace bezier
             node_index_t leftSubtreeSize;
             node_index_t rightSubtreeSize;
 
-            PointFunction(std::function<const point_2d(node_index_t)> f1, node_index_t lsize, node_index_t rsize) : f(f1), leftSubtreeSize(lsize), rightSubtreeSize(rsize) {}
+            PointFunction(const std::function<const point_2d(node_index_t)> &f1, node_index_t lsize, node_index_t rsize) : f(f1), leftSubtreeSize(lsize), rightSubtreeSize(rsize) {}
 
             //od strony użytkownika powinien mieć dostęp do tego operatora
             const point_2d operator()(node_index_t i) const
@@ -83,7 +83,6 @@ namespace bezier
 
             PointFunction &operator=(const PointFunction &) = default;
         };
-
     } // namespace types
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -100,7 +99,7 @@ namespace bezier
                        : i == 3 ? types::point_2d(1, 1)
                                 : throw std::out_of_range("a curve node index is out of range");
             },
-            4, 0);
+            constants::NUM_OF_CUBIC_BEZIER_NODES, 0);
     }
 
     ////////////////////////////////////////CAP////////////////////////////////////////////////////
@@ -115,7 +114,7 @@ namespace bezier
                        : i == 3 ? types::point_2d(1, -1)
                                 : throw std::out_of_range("a curve node index is out of range");
             },
-            4, 0);
+            constants::NUM_OF_CUBIC_BEZIER_NODES, 0);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +130,7 @@ namespace bezier
                        : i == 3 ? types::point_2d(1, 0)
                                 : throw std::out_of_range("a curve node index is out of range");
             },
-            4, 0);
+            constants::NUM_OF_CUBIC_BEZIER_NODES, 0);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,7 +146,7 @@ namespace bezier
                        : i == 3 ? types::point_2d(1, 0)
                                 : throw std::out_of_range("a curve node index is out of range");
             },
-            4, 0);
+            constants::NUM_OF_CUBIC_BEZIER_NODES, 0);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,7 +162,7 @@ namespace bezier
                        : i == 3 ? types::point_2d(q.X, q.Y)
                                 : throw std::out_of_range("a curve node index is out of range");
             },
-            4, 0);
+            constants::NUM_OF_CUBIC_BEZIER_NODES, 0);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,7 +177,7 @@ namespace bezier
 
     //zwraca funktor bazujący na wejściowym zmieniając return value wykorzystując movePt()
     template <typename numeric>
-    types::PointFunction MovePoint(const types::PointFunction &f, types::node_index_t i, numeric x, numeric y)
+    const types::PointFunction MovePoint(const types::PointFunction &f, types::node_index_t i, numeric x, numeric y)
     {
         static_assert(std::is_arithmetic<numeric>());
         return types::PointFunction([f, i, x, y](types::node_index_t q) {
@@ -192,7 +191,7 @@ namespace bezier
     //------------------------------RADIANS--------------------------------------------------------------//
     //zmienia stopnie na radiany
     template <typename degrees>
-    const double radians(degrees deg)
+    double radians(degrees deg)
     {
         return ((double)deg * (M_PI / 180.0f));
     }
@@ -207,7 +206,7 @@ namespace bezier
 
     //zwraca funktor bazujący na wejściowym zmieniając return value wykorzystując rotPoint()
     template <typename degrees>
-    types::PointFunction Rotate(const types::PointFunction &f, degrees a)
+    const types::PointFunction Rotate(const types::PointFunction &f, degrees a)
     {
         static_assert(std::is_arithmetic<degrees>());
         return types::PointFunction([f, a](types::node_index_t i) {
@@ -228,7 +227,7 @@ namespace bezier
 
     //zwraca funktor bazujący na wejściowym zmieniając return value wykorzystując scalePoint()
     template <typename numeric>
-    types::PointFunction Scale(const types::PointFunction &f, numeric x, numeric y)
+    const types::PointFunction Scale(const types::PointFunction &f, numeric x, numeric y)
     {
         static_assert(std::is_arithmetic<numeric>());
         return types::PointFunction([f, x, y](types::node_index_t i) {
@@ -249,7 +248,7 @@ namespace bezier
 
     //zwraca funktor bazujący na wejściowym zmieniając return value wykorzystując translatePoint()
     template <typename numeric>
-    types::PointFunction Translate(const types::PointFunction &f, numeric x, numeric y)
+    const types::PointFunction Translate(const types::PointFunction &f, numeric x, numeric y)
     {
         static_assert(std::is_arithmetic<numeric>());
         return types::PointFunction([f, x, y](types::node_index_t i) {
@@ -264,7 +263,7 @@ namespace bezier
     //nowy funktor ma rozmiary podrzew będące odpowiednio sumą poddrzew f1 i f2
     //a sam w sobie wykonuje rekurencyjnego binsearcha
     template <typename Func>
-    Func Concatenate(const Func &f1, const Func &f2)
+    const Func Concatenate(const Func &f1, const Func &f2)
     {
         return types::PointFunction([f1, f2](types::node_index_t i) {
             const types::node_index_t leftSize = f1.leftSubtreeSize + f1.rightSubtreeSize;
@@ -276,106 +275,114 @@ namespace bezier
 
     //wersja wieloargumentowa
     template <typename Func, typename... Rest>
-    Func Concatenate(Func f1, Func f2, Rest &&...funcs)
+    const Func Concatenate(const Func &f1, const Func &f2, Rest &&...funcs)
     {
         return Concatenate(Concatenate(f1, f2), funcs...);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////P3 CURVE PLOTTER////////////////////////////////////////////////////
-    //struktura komparatora dla wyliczonego setu punktów
-    struct cmp
-    {
-        bool operator()(const std::pair<int, int> &a, const std::pair<int, int> &b) const
-        {
-            return a.first > b.first || (a.first == b.first && a.second < b.second);
-        }
-    };
-
     class P3CurvePlotter
     {
-        const std::set<std::pair<int, int>, cmp> points;
-        const size_t res;
+        //struktura niestety imperatywna, co powoduje późniejsze lekkie odbiegnięcie od funkcyjności
+        //tj. korzystanie ze zmiennych tymczasowych nieconst
+        //na rzecz możliwości wykorzystania funckji std::transform() i std::generate()
+        //celem obejścia korzystania z pętli for
+        const int res;
+        const std::set<std::pair<int, int>> points;
 
+        //formuła wyliczająca punkt - algorytm dawał te same wyniki
         const types::point_2d deCasteljau(types::PointFunction f, long double t, types::node_index_t i) const
         {
             return f(i) * std::pow(1 - t, 3) + 3 * f(i + 1) * t * std::pow(1 - t, 2) + 3 * f(i + 2) * std::pow(t, 2) * (1 - t) + f(i + 3) * std::pow(t, 3);
         }
 
-        const std::pair<int, int> convertToIntPoint(const types::point_2d &p, size_t res) const
+        //mapowanie punktu (double)[-1, 1]x[-1, 1] na (int)[-res, res]x[-res, res]
+        const std::pair<int, int> convertToIntPoint(const types::point_2d &p) const
         {
-            return std::make_pair<int, int>((int)(p.Y * ((long double)res / 2)), (int)(p.X * ((long double)res / 2)));
+            return std::make_pair<int, int>(floor((p.Y * ((long double)res / 2))), floor((p.X * ((long double)res / 2))));
         }
 
-        std::set<std::pair<int, int>, cmp> calculateSegment(const types::PointFunction &f, types::node_index_t startSegment, size_t res) const
+        //generowanie punktów
+        std::set<std::pair<int, int>> calculateSegment(const types::PointFunction &f, types::node_index_t startSegment) const
         {
-            const long long int is = -(long long int)res / 2;
-            const long long int iend = (long long int)res / 2 + (res % 2);
+            //nie chcemy generować punktów spoza obszaru
+            const int resStart = -res / 2;
+            const int resEnd = res / 2 + (res % 2);
 
+            //krok w liczeniu punktów
             const long double precision = 1 / ((long double)(res * res));
 
-            std::set<std::pair<int, int>, cmp> segmentPoints;
-            long double t = 0;
+            //zwrotna krzywa
+            std::set<std::pair<int, int>> segmentPoints;
 
-            for (int i = 0; i <= res * res; i++)
-            {
-                const std::pair<int, int> tmp = convertToIntPoint(this->operator()(f, t, startSegment), res);
+            //generowanie ciągu długości res^2 od 0 do 1 z równym interwałem
+            std::vector<long double> ts(res * res + 1);
+            std::generate(ts.begin(), ts.end(), [precision, t = -precision]() mutable {t += precision; return t; });
 
-                if (tmp.first >= is && tmp.second >= is && tmp.first < iend && tmp.second < iend)
-                    segmentPoints.insert(tmp);
-                t += precision;
-            }
+            //lambda wymagająca tylko jednego argumentu do std::transform
+            const auto deCast = [resStart, resEnd, this, f, startSegment](long double t) {
+                const std::pair<int, int> tmp = convertToIntPoint(this->operator()(f, t, startSegment));
+                //sprawdzamy czy wygenerowany punkt mieści się w obszarze, jeśli nie to zwracamy pkt(res + 1, res + 1)
+                return tmp.first >= resStart && tmp.second >= resStart && tmp.first < resEnd && tmp.second < resEnd ? tmp : std::make_pair<int, int>(res + 1, res + 1);
+            };
+
+            //tworzymy zbiór {f(t): t nalezy do [0, 1]}
+            std::transform(ts.cbegin(), ts.cend(), std::inserter(segmentPoints, segmentPoints.begin()), deCast);
+            //usuwamy punkt (res + 1, res + 1)
+            segmentPoints.erase(std::make_pair<int, int>(res + 1, res + 1));
 
             return segmentPoints;
         }
 
-        //not functional
-        const std::set<std::pair<int, int>, cmp> calculateCurve(const types::PointFunction &f, int segments, size_t res)
+        //próba ufuncyjnienia struktury imperatywnej
+        void myInserter(const types::PointFunction &f, size_t segments, std::set<std::pair<int, int>> &rPoints, types::node_index_t startSegment = 0)
         {
-            std::set<std::pair<int, int>, cmp> rPoints;
-            std::set<types::point_2d> tmp;
+            if (startSegment == segments)
+                return;
+            const std::set<std::pair<int, int>> tmp = calculateSegment(f, startSegment);
+            rPoints.insert(tmp.begin(), tmp.end());
+            myInserter(f, segments, rPoints, startSegment + 1);
+        }
 
-            for (int i = 0; i < segments; i++)
-            {
-                std::set<std::pair<int, int>, cmp> tmp = calculateSegment(f, i, res);
-                rPoints.insert(tmp.begin(), tmp.end());
-            }
+        //przygotowyjemy dane do wyświetlenia - argument res jest wymagany bo w tym momencie jeszcze nie powstał jeszcze atrybut klasy
+        const std::set<std::pair<int, int>> calculateCurve(const types::PointFunction &f, size_t segments)
+        {
+            std::set<std::pair<int, int>> rPoints;
+            myInserter(f, segments, rPoints);
             return rPoints;
         }
 
-        std::string drawCurve(char fb, char bg, std::set<std::pair<int, int>, cmp>::iterator it, size_t count = 0) const
+        //generowanie pojedynczej linii
+        //pętla for przepisana na rekurencje
+        std::string drawRow(char fb, char bg, std::set<std::pair<int, int>>::iterator &it, const int i, int j) const
         {
-            std::string s = "";
-            long long int is = -(long long int)res / 2;
-            long long int js = -(long long int)res / 2;
-            const long long int iend = (long long int)res / 2 + (res % 2);
-            const long long int jend = (long long int)res / 2 + (res % 2);
-            for (int i = iend - 1; i >= is; i--)
-            {
-                for (int j = js; j < jend; j++)
-                {
-                    s += (it != points.end() && it->first == i && it->second == j) ? fb : bg;
-                    (it != points.end() && it->first == i && it->second == j) ? it++ : it;
-                }
-                s += "\n";
-            }
+            const int end = res / 2 + (res % 2);
+            return j < end ? ((it != points.end() && it->first == i && it->second == j) ? fb + drawRow(fb, bg, ++it, i, j + 1) : bg + drawRow(fb, bg, it, i, j + 1))
+                           : "\n";
+        }
 
-            return s;
+        const std::string drawCurve(char fb, char bg, std::set<std::pair<int, int>>::iterator &it, int i) const
+        {
+            const int end = res / 2 + (res % 2);
+            const std::string s = drawRow(fb, bg, it, i, -res / 2);
+            return i < end ? drawCurve(fb, bg, it, i + 1) + s : "";
         }
 
     public:
-        P3CurvePlotter(types::PointFunction f, int segments = 1, size_t resolution = 80) : res(resolution), points(calculateCurve(f, segments, resolution))
+        P3CurvePlotter(types::PointFunction f, size_t segments = 1, size_t resolution = 80) : res(resolution), points(calculateCurve(f, segments))
         {
         }
 
         void Print(std::ostream &s = std::cout, char fb = '*', char bg = ' ') const
         {
-            s << drawCurve(fb, bg, points.begin());
+            std::set<std::pair<int, int>>::iterator it = points.begin();
+            s << drawCurve(fb, bg, it, -res / 2);
         }
 
         const types::point_2d operator()(types::PointFunction f, double t, types::node_index_t i) const
         {
-            return deCasteljau(f, t, 4 * i);
+            return deCasteljau(f, t, constants::NUM_OF_CUBIC_BEZIER_NODES * i);
         }
     };
 
