@@ -8,30 +8,28 @@
 #include <vector>
 
 int main() {
-  // Koniczyna
-  auto fn = bezier::Cap();
-  //std::cout << ":00010\n";
-  fn = bezier::MovePoint(fn, 0, 0.75, 1.25);
-  //std::cout << ":00011\n";
-  fn = bezier::MovePoint(fn, 3, -0.75, 1.25);
-  //std::cout << ":00012\n";
-  fn = bezier::Concatenate(fn,
-                          bezier::Rotate(fn, 270),
-                          bezier::Rotate(fn, 180),
-                         bezier::Rotate(fn, 90));
-  for(int i = 0; i < 16; i++)
-    std::cout << fn(i) <<  std::endl;
+
+  // //Koniczyna
+  // auto fn = bezier::Cap();
+  // //std::cout << ":00010\n";
+  // fn = bezier::MovePoint(fn, 0, 0.75, 1.25);
+  // //std::cout << ":00011\n";
+  // fn = bezier::MovePoint(fn, 3, -0.75, 1.25);
+  // //std::cout << ":00012\n";
+  // fn = bezier::Concatenate(fn,
+  //                         bezier::Rotate(fn, 270),
+  //                         bezier::Rotate(fn, 180),
+  //                         bezier::Rotate(fn, 90));
   
-  // std::cout << ":00013\n";
   // fn = bezier::Scale(fn, 1.0, 0.5);
 
-  // std::cout << ":0001\n";
+  // //std::cout << ":0001\n";
   // const bezier::P3CurvePlotter plot1(fn, 4);
-  // std::cout << ":0002\n";
+  // //std::cout << ":0002\n";
   // plot1.Print(std::cout, '*', '.');
-  // std::cout << ":0003\n";
+  // //std::cout << ":0003\n";
   // std::ofstream file{"myclover.out"};
-  // std::cout << ":0004\n";
+  // //std::cout << ":0004\n";
   // plot1.Print(file, 'o');
 
   // // Gwiazda
@@ -44,22 +42,35 @@ int main() {
   // plot2.Print(std::cout, 'X', ' ');
   // plot2.Print(std::cout, ' ', '0');
 
-  // // Buźka
-  // fn = bezier::ConvexArc();
-  // fn = bezier::Concatenate(fn,
-  //                          bezier::Rotate(fn, 270),
-  //                          bezier::Rotate(fn, 180),
-  //                          bezier::Rotate(fn, 90),
-  //                          bezier::Translate(bezier::Scale(bezier::Cup(), 0.625, 0.25), 0.0, -0.375),
-  //                          bezier::Scale(bezier::Cap(), 0.125, 0.125),
-  //                          bezier::LineSegment(bezier::types::point_2d{-0.625, 0.375},
-  //                                              bezier::types::point_2d{-0.25, 0.5}),
-  //                          bezier::LineSegment(bezier::types::point_2d{0.625, 0.375},
-  //                                              bezier::types::point_2d{0.25, 0.5}));
-  // const bezier::P3CurvePlotter plot3(bezier::Scale(fn, 1.0, 0.5), 8, 60);
-  // plot3.Print();
+  //Buźka
+  
+  auto fn = bezier::ConvexArc();
+  fn = bezier::Concatenate(fn,
+                           bezier::Rotate(fn, 270),
+                           bezier::Rotate(fn, 180),
+                           bezier::Rotate(fn, 90),
+                           bezier::Translate(bezier::Scale(bezier::Cup(), 0.625, 0.25), 0.0, -0.375),
+                           bezier::Scale(bezier::Cap(), 0.125, 0.125),
+                           bezier::LineSegment(bezier::types::point_2d{-0.625, 0.375},
+                                               bezier::types::point_2d{-0.25, 0.5}),
+                           bezier::LineSegment(bezier::types::point_2d{0.625, 0.375},
+                                               bezier::types::point_2d{0.25, 0.5}));
 
-  // Węzły (punkty kontrolne) krzywej – sprawdzenie poprawności węzłów
+  fn = bezier::Scale(fn, 1.0, 0.5);
+  for(int i = 0; i < 8; i++)
+  {
+      for(int j = 0; j < 4; j++)
+      {
+         std::cout << fn(i * 4 + j) << " ";
+      }
+      std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
+  const bezier::P3CurvePlotter plot3(fn, 8, 60);
+  plot3.Print();
+
+  // //Węzły (punkty kontrolne) krzywej – sprawdzenie poprawności węzłów
   // constexpr bezier::types::real_t precision = std::pow(2, -16);
   // bezier::types::real_t a, b;
   // fn = bezier::Concatenate(bezier::Rotate(bezier::Cup(), 90),
@@ -77,12 +88,16 @@ int main() {
   // );
   // std::cout << "Curve node correctness: PASS\n";
 
+  // //std::cout <<  "Tu1\n";
   // // Sprawdzenie wyjątku
   // fn = bezier::Concatenate(bezier::ConvexArc(),
   //                          bezier::ConcaveArc(),
   //                          bezier::Cap(),
   //                          bezier::Cup());
+
+  // //std::cout <<  "Tu2\n";
   // try {
+  //   //std::cout <<  "Tu3\n";
   //   a = fn(4 * bezier::constants::NUM_OF_CUBIC_BEZIER_NODES).X;
   //   std::cout << "Exception: FAIL\n";
   // }
